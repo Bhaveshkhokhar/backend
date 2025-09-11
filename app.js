@@ -78,7 +78,7 @@ app.use(
 
 app.use(
   cors({
-    origin: ["http://localhost:5173","http://localhost:5174","http://localhost:5175"], // specify your frontend origin
+    origin: ["https://chefbookinguser.netlify.app","https://chefbookingchef.netlify.app","https://chefbookinghost.netlify.app"], // specify your frontend origin
     credentials: true,
   })
 );
