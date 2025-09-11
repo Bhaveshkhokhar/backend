@@ -9,7 +9,7 @@ const cookieparser = require("cookie-parser");
 const session = require("express-session");
 const MongodbStore = require("connect-mongodb-session")(session);
 const multer = require("multer");
-require('dotenv').config();
+require("dotenv").config();
 
 //local module
 const rootDir = require("./utils/pathUtil");
@@ -78,7 +78,11 @@ app.use(
 
 app.use(
   cors({
-    origin: ["https://chefbookinguser.netlify.app","https://chefbookingchef.netlify.app","https://chefbookinghost.netlify.app"], // specify your frontend origin
+    origin: [
+      "https://chefbookinguser.netlify.app",
+      "https://chefbookingchef.netlify.app",
+      "https://chefbookinghost.netlify.app",
+    ], // specify your frontend origin
     credentials: true,
   })
 );
@@ -92,7 +96,7 @@ app.use(bookingRouter);
 app.use(bookingHistoryRouter);
 app.use(hostRouter);
 
-const PORT = 3001;
+const PORT = process.env.PORT || 3001;
 
 mongoose
   .connect(DB_path)
