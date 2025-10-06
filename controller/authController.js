@@ -25,14 +25,14 @@ exports.getAuthStatus = async (req, res, next) => {
   try {
     let decoded;
     try {
-       decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(token, secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
       return res.status(401).json({
-        isLoggedIn:false,
-        message:"user is not authenticated",
-      })
+        isLoggedIn: false,
+        message: "user is not authenticated",
+      });
     }
 
     const existingUser = await User.findOne({ mobile: decoded.Number });
@@ -55,7 +55,7 @@ exports.getAuthStatus = async (req, res, next) => {
 };
 
 exports.postLogin = async (req, res, next) => {
-  const { Number, Password,rememberMe } = req.body;
+  const { Number, Password, rememberMe } = req.body;
   try {
     // Check if the user exists
 
@@ -83,15 +83,15 @@ exports.postLogin = async (req, res, next) => {
         Number: user.mobile,
       },
       secret,
-      { expiresIn: rememberMe?"7d":"1h"}
+      { expiresIn: rememberMe ? "7d" : "1h" }
     );
 
     // Set the token in the response cookies
     res.cookie("user_token", token, {
       httpOnly: true,
-      secure: false, // Set to true if using HTTPS
-      sameSite: "Lax", // Adjust based on your requirements
-      maxAge: rememberMe? 604800000:3600000, // 1 hour
+      secure: true, // Set to true if using HTTPS
+      sameSite: "None", // Adjust based on your requirements
+      maxAge: rememberMe ? 604800000 : 3600000, // 1 hour
     });
 
     // Return a success response
@@ -221,7 +221,7 @@ exports.postOtpVerification = [
 ];
 
 exports.postSignup = async (req, res, next) => {
-  const { Otp ,rememberMe} = req.body;
+  const { Otp, rememberMe } = req.body;
   if (!req.session.otp) {
     return res.status(400).json({
       status: "fail",
@@ -253,15 +253,15 @@ exports.postSignup = async (req, res, next) => {
         Number: newUser.mobile,
       },
       secret,
-      { expiresIn: rememberMe?"7d":"1h" }
+      { expiresIn: rememberMe ? "7d" : "1h" }
     );
 
     // Set the token in the response cookies
     res.cookie("user_token", token, {
       httpOnly: true,
-      secure: false,
-      sameSite: "Lax",
-      maxAge: rememberMe? 604800000:3600000, // 1hour
+      secure: true,
+      sameSite: "None", // Adjust based on your requirements
+      maxAge: rememberMe ? 604800000 : 3600000, // 1hour
     });
     // Clear the session after successful signup
     await req.session.destroy((err) => {
@@ -298,8 +298,8 @@ exports.postLogout = async (req, res, next) => {
     // Clear the token cookie
     res.clearCookie("user_token", {
       httpOnly: true,
-      secure: false, // ✅ Set to true in production (HTTPS)
-      sameSite: "Lax",
+      secure: true, // ✅ Set to true in production (HTTPS)
+      sameSite: "None", // Adjust based on your requirements
     });
 
     res.status(200).json({

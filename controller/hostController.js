@@ -82,8 +82,8 @@ exports.postHostLogin=async(req,res,next)=>{
       // Set the token in the response cookies
       res.cookie("host_token", token, {
         httpOnly: true,
-        secure: false, // Set to true if using HTTPS
-        sameSite: "Lax", // Adjust based on your requirements
+        secure: true, // Set to true if using HTTPS
+        sameSite: "None", // Adjust based on your requirements
         maxAge: rememberMe? 604800000:3600000, // 7day or 1 hour
       });
   
@@ -115,8 +115,8 @@ exports.postHostLogout=async(req,res,next)=>{
     // Clear the token cookie
     res.clearCookie("host_token", {
       httpOnly: true,
-      secure: false, // ✅ Set to true in production (HTTPS)
-      sameSite: "Lax",
+      secure: true, // ✅ Set to true in production (HTTPS)
+      sameSite: "None",
     });
 
     res.status(200).json({

@@ -256,8 +256,8 @@ exports.postChefLogout = async (req, res, next) => {
     // Clear the token cookie
     res.clearCookie("chef_token", {
       httpOnly: true,
-      secure: false, // ✅ Set to true in production (HTTPS)
-      sameSite: "Lax",
+      secure: true, // ✅ Set to true in production (HTTPS)
+      sameSite: "None", // ✅ Set to 'None' in production
     });
 
     res.status(200).json({
@@ -352,8 +352,8 @@ exports.postChefLogin = async (req, res, next) => {
     // Set the token in the response cookies
     res.cookie("chef_token", token, {
       httpOnly: true,
-      secure: false, // Set to true if using HTTPS
-      sameSite: "Lax", // Adjust based on your requirements
+      secure: true, // Set to true if using HTTPS
+      sameSite: "None", // Adjust based on your requirements
       maxAge: rememberMe ? 604800000 : 3600000, // 1 hour
     });
 
