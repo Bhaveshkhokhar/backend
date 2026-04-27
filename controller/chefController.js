@@ -3,6 +3,7 @@ const Host = require("../model/host");
 const jwt = require("jsonwebtoken");
 const Mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
+const { uploadFileToS3, generateS3Key } = require("../utils/s3Util");
 require("dotenv").config();
 const secret = process.env.SECRET_KEY;
 const { check, validationResult } = require("express-validator");
@@ -119,7 +120,7 @@ exports.updateChefProfile = [
           certifications: Array.isArray(req.body.Certifications)
             ? req.body.Certifications
             : req.body.Certifications?.split(",").map((c) => c.trim()),
-        }
+        },
       );
 
       return res.status(201).json({
@@ -165,10 +166,20 @@ exports.updateChefProfilePic = async (req, res, next) => {
       });
     }
     if (req.file) {
-      existingChef.profileImage = `/upload/${req.file.filename}`;
+      const fileKey = generateS3Key(
+        "chef",
+        existingChef.mobile,
+        req.file.originalname,
+      );
+      const imageUrl = await uploadFileToS3({
+        buffer: req.file.buffer,
+        key: fileKey,
+        contentType: req.file.mimetype,
+      });
+      existingChef.profileImage = imageUrl;
     } else {
       return res.status(404).json({
-        status: fail,
+        status: "fail",
         message: "File not Found",
       });
     }
@@ -346,7 +357,7 @@ exports.postChefLogin = async (req, res, next) => {
         Number: chef.mobile,
       },
       secret,
-      { expiresIn: rememberMe ? "7d" : "1h" }
+      { expiresIn: rememberMe ? "7d" : "1h" },
     );
 
     // Set the token in the response cookies
@@ -389,10 +400,10 @@ exports.addChef = [
     .isLength({ min: 8 })
     .withMessage("Password must be at least 8 characters long")
     .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
     )
     .withMessage(
-      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
     ),
   check("Number")
     .trim()
@@ -520,10 +531,22 @@ exports.addChef = [
         });
       }
       const hashedPassword = await bcrypt.hash(req.body.Password, 10);
+
+      const fileKey = generateS3Key(
+        "chef",
+        req.body.Number,
+        req.file.originalname,
+      );
+      const imageUrl = await uploadFileToS3({
+        buffer: req.file.buffer,
+        key: fileKey,
+        contentType: req.file.mimetype,
+      });
+
       const chef = {
         mobile: req.body.Number,
         password: hashedPassword,
-        profileImage: `/upload/${req.file.filename}`,
+        profileImage: imageUrl,
         name: req.body.Name,
         available: req.body.Available === "true" || req.body.Available === true, // ensure boolean
         type: req.body.Type,
@@ -586,7 +609,7 @@ exports.hostchangechefAvailability = async (req, res, next) => {
     }
     const chef = await Chef.updateOne(
       { _id: req.body.id },
-      { $set: { available: req.body.flag } }
+      { $set: { available: req.body.flag } },
     );
     if (!chef) {
       return res.status(404).json({

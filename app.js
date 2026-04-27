@@ -8,7 +8,6 @@ const cors = require("cors");
 const cookieparser = require("cookie-parser");
 const session = require("express-session");
 const MongodbStore = require("connect-mongodb-session")(session);
-const multer = require("multer");
 require("dotenv").config();
 
 //local module
@@ -31,22 +30,6 @@ const store = new MongodbStore({
   ttl: 60 * 5,
 });
 
-const storage = multer.diskStorage({
-  destination: (req, file, cb) => {
-    cb(null, path.join(rootDir, "upload"));
-  },
-  filename: (req, file, cb) => {
-    cb(null, `${Date.now()}-${file.originalname}`);
-  },
-});
-const fileFilter = (req, file, cb) => {
-  if (["image/png", "image/jpg", "image/jpeg"].includes(file.mimetype)) {
-    cb(null, true);
-  } else {
-    cb(null, false);
-  }
-};
-
 const app = express();
 //cookie parsing
 app.use(cookieparser());
@@ -57,9 +40,8 @@ app.use(express.urlencoded({ extended: true }));
 //json->javascript
 app.use(express.json());
 
-app.use(multer({ storage, fileFilter }).single("image"));
 app.use(express.static(path.join(rootDir, "public")));
-app.use("/upload", express.static(path.join(rootDir, "upload")));
+// Removed /upload static serving - all images now served from S3
 //session
 app.use(
   session({
@@ -73,7 +55,7 @@ app.use(
       httpOnly: true,
       sameSite: "Lax", // Adjust based on your requirements
     },
-  })
+  }),
 );
 
 app.use(
@@ -84,7 +66,7 @@ app.use(
       "https://chefbookinghost.netlify.app",
     ], // specify your frontend origin
     credentials: true,
-  })
+  }),
 );
 
 app.use(userRouter);
@@ -102,7 +84,7 @@ mongoose
   .connect(DB_path)
   .then(() => {
     app.listen(PORT, () => {
-      console.log(`server running at: http://localhost:${PORT}`);
+      console.log(`server running at port : ${PORT}`);
     });
   })
   .catch((err) => {

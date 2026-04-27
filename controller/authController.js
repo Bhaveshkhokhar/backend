@@ -83,7 +83,7 @@ exports.postLogin = async (req, res, next) => {
         Number: user.mobile,
       },
       secret,
-      { expiresIn: rememberMe ? "7d" : "1h" }
+      { expiresIn: rememberMe ? "7d" : "1h" },
     );
 
     // Set the token in the response cookies
@@ -144,10 +144,10 @@ exports.postOtpVerification = [
     .isLength({ min: 8 })
     .withMessage("Password must be at least 8 characters long")
     .matches(
-      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
     )
     .withMessage(
-      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character"
+      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
     ),
 
   //validate Confirm Password
@@ -199,7 +199,7 @@ exports.postOtpVerification = [
 
       await client.messages.create({
         body: `Your OTP for Chef Booking is ${otp}. It will expire in 5 minutes.`,
-        from: "+13803240507",
+        from: "+17622207310",
         to: `+91${Number}`,
       });
       // Create a new user instance
@@ -253,7 +253,7 @@ exports.postSignup = async (req, res, next) => {
         Number: newUser.mobile,
       },
       secret,
-      { expiresIn: rememberMe ? "7d" : "1h" }
+      { expiresIn: rememberMe ? "7d" : "1h" },
     );
 
     // Set the token in the response cookies

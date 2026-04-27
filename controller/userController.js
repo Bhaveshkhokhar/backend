@@ -1,61 +1,62 @@
 const User = require("../model/user");
 const jwt = require("jsonwebtoken");
-const Host=require("../model/host");
+const Host = require("../model/host");
+const { uploadFileToS3, generateS3Key } = require("../utils/s3Util");
 require("dotenv").config();
 const secret = process.env.SECRET_KEY;
 const { check, validationResult } = require("express-validator");
 const user = require("../model/user");
 
-exports.changeUserStatus=async(req,res,next)=>{
+exports.changeUserStatus = async (req, res, next) => {
   const token = req.cookies.host_token;
-    if (!token) {
+  if (!token) {
+    return res.status(401).json({
+      isLoggedIn: false,
+      message: "please login",
+    });
+  }
+  try {
+    let decoded;
+    try {
+      decoded = jwt.verify(token, secret);
+      // token is valid
+    } catch (err) {
+      // token is invalid or expired
       return res.status(401).json({
         isLoggedIn: false,
-        message: "please login",
+        message: "host is not authenticated please login",
       });
     }
-    try {
-      let decoded;
-      try {
-        decoded = jwt.verify(token, secret);
-        // token is valid
-      } catch (err) {
-        // token is invalid or expired
-        return res.status(401).json({
-          isLoggedIn: false,
-          message: "host is not authenticated please login",
-        });
-      }
-  
-      const host = await Host.findOne({ hostid: decoded.Hostid });
-  
-      if (!host) {
-        return res.status(404).json({
-          isLoggedIn: false,
-          message: "Host not found",
-        });
-      }
-      const user = await User.updateOne(
-        { _id: req.body.id },
-        { $set: { status: req.body.status } }
-      );
-      if (!user) {
-        return res.status(404).json({
-          message: "user not found",
-        });
-      }
-      return res.status(201).json({
-        status: "success",
+
+    const host = await Host.findOne({ hostid: decoded.Hostid });
+
+    if (!host) {
+      return res.status(404).json({
+        isLoggedIn: false,
+        message: "Host not found",
       });
-    } catch (error) {
-      console.error("Error while updating:", error);
-      return res
-        .status(500)
-        .json({ message: "Internal server error please try after some time" });
     }
-}
-exports.getAllUser=async(req,res,next)=>{
-const token = req.cookies.host_token;
+    const user = await User.updateOne(
+      { _id: req.body.id },
+      { $set: { status: req.body.status } },
+    );
+    if (!user) {
+      return res.status(404).json({
+        message: "user not found",
+      });
+    }
+    return res.status(201).json({
+      status: "success",
+    });
+  } catch (error) {
+    console.error("Error while updating:", error);
+    return res
+      .status(500)
+      .json({ message: "Internal server error please try after some time" });
+  }
+};
+exports.getAllUser = async (req, res, next) => {
+  const token = req.cookies.host_token;
   if (!token) {
     return res.status(401).json({
       isLoggedIn: false,
@@ -84,16 +85,16 @@ const token = req.cookies.host_token;
       });
     }
     const users = await User.find();
-    const usersdetail=users.map((user)=>{
+    const usersdetail = users.map((user) => {
       return {
-      id:user._id,
-      email:user.email,
-      name:user.name,
-      mobile:user.mobile,
-      gender:user.gender,
-      image:user.profileImage,
-      status:user.status,
-    };
+        id: user._id,
+        email: user.email,
+        name: user.name,
+        mobile: user.mobile,
+        gender: user.gender,
+        image: user.profileImage,
+        status: user.status,
+      };
     });
     return res.status(201).json({
       usersdetail,
@@ -105,7 +106,7 @@ const token = req.cookies.host_token;
       .status(500)
       .json({ message: "Internal server error please try after some time" });
   }
-}
+};
 exports.userProfilePicUpdate = async (req, res, next) => {
   const token = req.cookies.user_token;
   if (!token) {
@@ -135,15 +136,96 @@ exports.userProfilePicUpdate = async (req, res, next) => {
         message: "User not found please sign in",
       });
     }
-    if (req.file) {
-      existingUser.profileImage = `/upload/${req.file.filename}`;
+
+    if (!req.file) {
+      return res.status(400).json({
+        status: "fail",
+        message: "No image file provided",
+      });
     }
+
+    const fileKey = generateS3Key(
+      "user",
+      existingUser.mobile,
+      req.file.originalname,
+    );
+    const imageUrl = await uploadFileToS3({
+      buffer: req.file.buffer,
+      key: fileKey,
+      contentType: req.file.mimetype,
+    });
+
+    existingUser.profileImage = imageUrl;
     await existingUser.save();
 
     return res.status(201).json({
       status: "success",
       message: "Profile Image is updated",
-      image:existingUser.profileImage,
+      image: existingUser.profileImage,
+    });
+  } catch (error) {
+    console.error("Error updating user profile pic:", error);
+    res
+      .status(500)
+      .json({ message: "Internal server error please try after some time" });
+  }
+};
+
+exports.userProfilePicUpdatev2 = async (req, res, next) => {
+  const token = req.cookies.user_token;
+  if (!token) {
+    return res.status(401).json({
+      isLoggedIn: false,
+      message: "please login",
+    });
+  }
+  try {
+    let decoded;
+    try {
+      decoded = jwt.verify(token, secret);
+      // token is valid
+    } catch (err) {
+      // token is invalid or expired
+      return res.status(401).json({
+        isLoggedIn: false,
+        message: "user is not authenticated please login",
+      });
+    }
+
+    const existingUser = await User.findOne({ mobile: decoded.Number });
+
+    if (!existingUser) {
+      return res.status(404).json({
+        isLoggedIn: false,
+        message: "User not found please sign in",
+      });
+    }
+
+    if (!req.file) {
+      return res.status(400).json({
+        status: "fail",
+        message: "No image file provided",
+      });
+    }
+
+    const fileKey = generateS3Key(
+      "user",
+      existingUser.mobile,
+      req.file.originalname,
+    );
+    const imageUrl = await uploadFileToS3({
+      buffer: req.file.buffer,
+      key: fileKey,
+      contentType: req.file.mimetype,
+    });
+
+    existingUser.profileImage = imageUrl;
+    await existingUser.save();
+
+    return res.status(201).json({
+      status: "success",
+      message: "Profile Image is updated",
+      image: existingUser.profileImage,
     });
   } catch (error) {
     console.error("Error add user details:", error);
@@ -230,7 +312,17 @@ exports.userAdd = [
         });
       }
       if (req.file) {
-        existingUser.profileImage = `/upload/${req.file.filename}`;
+        const fileKey = generateS3Key(
+          "user",
+          existingUser.mobile,
+          req.file.originalname,
+        );
+        const imageUrl = await uploadFileToS3({
+          buffer: req.file.buffer,
+          key: fileKey,
+          contentType: req.file.mimetype,
+        });
+        existingUser.profileImage = imageUrl;
       }
       existingUser.name = req.body.Name;
       if (req.body.Email) {
@@ -254,7 +346,7 @@ exports.userAdd = [
       return res.status(201).json({
         status: "success",
         message: "details are added",
-        image:req.file?`/upload/${req.file.filename}`:"/defaultpic.jpg",
+        image: req.file ? existingUser.profileImage : "/defaultpic.jpg",
       });
     } catch (error) {
       console.error("Error add user details:", error);
@@ -343,17 +435,17 @@ exports.userUpdate = [
       existingUser.name = req.body.Name;
       if (req.body.Email) {
         existingUser.email = req.body.Email;
-      }else{
+      } else {
         existingUser.email = "";
       }
       if (req.body.Address) {
         existingUser.address = req.body.Address;
-      }else{
+      } else {
         existingUser.address = "";
       }
       if (req.body.Birthdate) {
         existingUser.birthday = req.body.Birthdate;
-      }else{
+      } else {
         existingUser.birthday = "";
       }
       existingUser.gender = req.body.Gender;
@@ -401,7 +493,7 @@ exports.userData = async (req, res, next) => {
       });
     }
     const data = {
-      id:existingUser._id,
+      id: existingUser._id,
       Name: existingUser.name,
       Number: existingUser.mobile,
       Email: existingUser.email,
@@ -409,7 +501,7 @@ exports.userData = async (req, res, next) => {
       Address: existingUser.address,
       Birthdate: existingUser.birthday ? existingUser.birthday : "",
       Gender: existingUser.gender,
-      Status:existingUser.status,
+      Status: existingUser.status,
     };
     return res.status(201).json({
       userData: data,
