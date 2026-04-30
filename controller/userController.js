@@ -55,6 +55,7 @@ exports.changeUserStatus = async (req, res, next) => {
       .json({ message: "Internal server error please try after some time" });
   }
 };
+
 exports.getAllUser = async (req, res, next) => {
   const token = req.cookies.host_token;
   if (!token) {
@@ -107,6 +108,7 @@ exports.getAllUser = async (req, res, next) => {
       .json({ message: "Internal server error please try after some time" });
   }
 };
+
 exports.userProfilePicUpdate = async (req, res, next) => {
   const token = req.cookies.user_token;
   if (!token) {
@@ -234,6 +236,7 @@ exports.userProfilePicUpdatev2 = async (req, res, next) => {
       .json({ message: "Internal server error please try after some time" });
   }
 };
+
 exports.userAdd = [
   check("Name")
     .trim()
@@ -356,6 +359,7 @@ exports.userAdd = [
     }
   },
 ];
+
 exports.userUpdate = [
   check("Name")
     .trim()
@@ -463,6 +467,7 @@ exports.userUpdate = [
     }
   },
 ];
+
 exports.userData = async (req, res, next) => {
   const token = req.cookies.user_token;
   if (!token) {
