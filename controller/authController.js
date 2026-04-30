@@ -3,6 +3,7 @@ const bcrypt = require("bcrypt");
 const jwt = require("jsonwebtoken");
 const twilio = require("twilio");
 const User = require("../model/user");
+const { encrypt, decrypt } = require("../Helper/tokenEncryptionDecryption");
 require("dotenv").config();
 const secret = process.env.SECRET_KEY;
 const accountSid = process.env.ACCOUNTSID;
@@ -25,7 +26,7 @@ exports.getAuthStatus = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -85,9 +86,10 @@ exports.postLogin = async (req, res, next) => {
       secret,
       { expiresIn: rememberMe ? "7d" : "1h" },
     );
+    const encryptedToken = encrypt(token);
 
     // Set the token in the response cookies
-    res.cookie("user_token", token, {
+    res.cookie("user_token", encryptedToken, {
       httpOnly: true,
       secure: true, // Set to true if using HTTPS
       sameSite: "None", // Adjust based on your requirements
@@ -255,9 +257,9 @@ exports.postSignup = async (req, res, next) => {
       secret,
       { expiresIn: rememberMe ? "7d" : "1h" },
     );
-
+    const encryptedToken = encrypt(token);
     // Set the token in the response cookies
-    res.cookie("user_token", token, {
+    res.cookie("user_token", encryptedToken, {
       httpOnly: true,
       secure: true,
       sameSite: "None", // Adjust based on your requirements

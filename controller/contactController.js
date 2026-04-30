@@ -2,6 +2,7 @@ const { Contact } = require("../model/contact");
 const { check, validationResult } = require("express-validator");
 const jwt = require("jsonwebtoken");
 const Host = require("../model/host");
+const { decrypt } = require("../Helper/tokenEncryptionDecryption");
 require("dotenv").config();
 const secret = process.env.SECRET_KEY;
 exports.createContact = [
@@ -85,7 +86,7 @@ exports.getRequests = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -116,7 +117,7 @@ exports.getRequests = async (req, res, next) => {
       .json({ message: "Internal server error please try after some time" });
   }
 };
-exports.read=async(req,res,next)=>{
+exports.read = async (req, res, next) => {
   const token = req.cookies.host_token;
   if (!token) {
     return res.status(401).json({
@@ -127,7 +128,7 @@ exports.read=async(req,res,next)=>{
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -145,8 +146,11 @@ exports.read=async(req,res,next)=>{
         message: "Host not found",
       });
     }
-    const request =  await Contact.updateOne({ _id: req.body.id }, { $set: { read: true } });
-    if(!request){
+    const request = await Contact.updateOne(
+      { _id: req.body.id },
+      { $set: { read: true } },
+    );
+    if (!request) {
       return res.status(404).json({
         message: " request not found",
       });

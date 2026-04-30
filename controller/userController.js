@@ -2,6 +2,7 @@ const User = require("../model/user");
 const jwt = require("jsonwebtoken");
 const Host = require("../model/host");
 const { uploadFileToS3, generateS3Key } = require("../utils/s3Util");
+const { decrypt } = require("../Helper/tokenEncryptionDecryption");
 require("dotenv").config();
 const secret = process.env.SECRET_KEY;
 const { check, validationResult } = require("express-validator");
@@ -18,7 +19,7 @@ exports.changeUserStatus = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -67,7 +68,7 @@ exports.getAllUser = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -120,7 +121,7 @@ exports.userProfilePicUpdate = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -184,7 +185,7 @@ exports.userProfilePicUpdatev2 = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -296,7 +297,7 @@ exports.userAdd = [
     try {
       let decoded;
       try {
-        decoded = jwt.verify(token, secret);
+        decoded = jwt.verify(decrypt(token), secret);
         // token is valid
       } catch (err) {
         // token is invalid or expired
@@ -418,7 +419,7 @@ exports.userUpdate = [
     try {
       let decoded;
       try {
-        decoded = jwt.verify(token, secret);
+        decoded = jwt.verify(decrypt(token), secret);
         // token is valid
       } catch (err) {
         // token is invalid or expired
@@ -479,7 +480,7 @@ exports.userData = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired

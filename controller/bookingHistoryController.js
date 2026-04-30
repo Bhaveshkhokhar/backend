@@ -1,13 +1,14 @@
 const booking = require("../model/booking");
-const  BookingHistory=require("../model/bookingHistory");
-const Chef=require("../model/chef");
-const User=require("../model/user");
+const BookingHistory = require("../model/bookingHistory");
+const Chef = require("../model/chef");
+const User = require("../model/user");
 const jwt = require("jsonwebtoken");
+const { decrypt } = require("../Helper/tokenEncryptionDecryption");
 require("dotenv").config();
 const secret = process.env.SECRET_KEY;
 
-exports.getChefBookingHistory=async(req,res,next)=>{
-const token = req.cookies.chef_token;
+exports.getChefBookingHistory = async (req, res, next) => {
+  const token = req.cookies.chef_token;
   if (!token) {
     return res.status(401).json({
       isLoggedIn: false,
@@ -17,7 +18,7 @@ const token = req.cookies.chef_token;
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -35,21 +36,20 @@ const token = req.cookies.chef_token;
         message: "Chef not found in Database",
       });
     }
-    const bookings = await BookingHistory.find({ chef_id: existingChef._id }).populate(
-      "user_id",
-      "name"
-    );
-    const data=bookings.map((booking)=>{
-      return{
-        bookedAt:booking.bookedAt,
-        name:booking.user_id.name,
-        date:booking.date,
-        time:booking.time,
-        price:booking.totalPrice,
-        modeOfPayment:booking.modeOfPayment,
-        status:booking.status,
+    const bookings = await BookingHistory.find({
+      chef_id: existingChef._id,
+    }).populate("user_id", "name");
+    const data = bookings.map((booking) => {
+      return {
+        bookedAt: booking.bookedAt,
+        name: booking.user_id.name,
+        date: booking.date,
+        time: booking.time,
+        price: booking.totalPrice,
+        modeOfPayment: booking.modeOfPayment,
+        status: booking.status,
       };
-    })
+    });
 
     return res.status(201).json({
       bookings: data,
@@ -63,8 +63,8 @@ const token = req.cookies.chef_token;
   }
 };
 
-exports.getYourBookingsHistory=async(req,res,next)=>{
-const token = req.cookies.user_token;
+exports.getYourBookingsHistory = async (req, res, next) => {
+  const token = req.cookies.user_token;
   if (!token) {
     return res.status(401).json({
       isLoggedIn: false,
@@ -74,7 +74,7 @@ const token = req.cookies.user_token;
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -92,10 +92,9 @@ const token = req.cookies.user_token;
         message: "User not found please sign in",
       });
     }
-    const bookings = await BookingHistory.find({ user_id: existingUser._id }).populate(
-      "chef_id",
-      "name profileImage _id type"
-    );
+    const bookings = await BookingHistory.find({
+      user_id: existingUser._id,
+    }).populate("chef_id", "name profileImage _id type");
 
     return res.status(201).json({
       userBookingHistoryData: bookings,

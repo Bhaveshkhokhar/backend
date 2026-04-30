@@ -5,11 +5,12 @@ const Chef = require("../model/chef");
 const Host = require("../model/host");
 const jwt = require("jsonwebtoken");
 const Mongoose = require("mongoose");
+const { decrypt } = require("../Helper/tokenEncryptionDecryption");
 const gstRate = 0.18;
 require("dotenv").config();
 const secret = process.env.SECRET_KEY;
 
-exports.chefBookingUpdate=async(req,res,next)=>{
+exports.chefBookingUpdate = async (req, res, next) => {
   const token = req.cookies.chef_token;
   if (!token) {
     return res.status(401).json({
@@ -20,7 +21,7 @@ exports.chefBookingUpdate=async(req,res,next)=>{
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -29,20 +30,29 @@ exports.chefBookingUpdate=async(req,res,next)=>{
         message: "Chef is not authenticated please login",
       });
     }
-    const chef=await Chef.findOne({mobile:decoded.Number});
+    const chef = await Chef.findOne({ mobile: decoded.Number });
     const booking = await Booking.findByIdAndDelete({
       _id: req.body.id,
     });
     if (!booking) {
-      const bookinghist =await BookingHistory.findOne({date:req.body.date,time:req.body.time,chef_id:chef._id, bookedAt:req.body.bookedAt});
-      if(!bookinghist) {
-         return res
-        .status(404)
-        .json({ message: "Booking not found", id: req.body.id, });
+      const bookinghist = await BookingHistory.findOne({
+        date: req.body.date,
+        time: req.body.time,
+        chef_id: chef._id,
+        bookedAt: req.body.bookedAt,
+      });
+      if (!bookinghist) {
+        return res
+          .status(404)
+          .json({ message: "Booking not found", id: req.body.id });
       }
       return res
         .status(400)
-        .json({ message: `Booking already ${bookinghist.status}`, id: req.body.id, status:bookinghist.status });
+        .json({
+          message: `Booking already ${bookinghist.status}`,
+          id: req.body.id,
+          status: bookinghist.status,
+        });
     }
     const bookinghistory = new BookingHistory({
       chef_id: booking.chef_id,
@@ -65,9 +75,9 @@ exports.chefBookingUpdate=async(req,res,next)=>{
       .status(500)
       .json({ message: "Internal server error please try after some time" });
   }
-}
+};
 
-exports.getChefBookings= async (req, res, next) => {
+exports.getChefBookings = async (req, res, next) => {
   const token = req.cookies.chef_token;
   if (!token) {
     return res.status(401).json({
@@ -78,7 +88,7 @@ exports.getChefBookings= async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -98,20 +108,20 @@ exports.getChefBookings= async (req, res, next) => {
     }
     const bookings = await Booking.find({ chef_id: existingChef._id }).populate(
       "user_id",
-      "name mobile"
+      "name mobile",
     );
-    const data=bookings.map((booking)=>{
+    const data = bookings.map((booking) => {
       return {
-        bookedAt:booking.bookedAt,
-        id:booking._id,
-        user:booking.user_id,
-        date:booking.date,
-        time:booking.time,
-        price:booking.totalPrice,
-        address:booking.Address,
-        modeOfPayment:booking.modeOfPayment,
-      }
-    })
+        bookedAt: booking.bookedAt,
+        id: booking._id,
+        user: booking.user_id,
+        date: booking.date,
+        time: booking.time,
+        price: booking.totalPrice,
+        address: booking.Address,
+        modeOfPayment: booking.modeOfPayment,
+      };
+    });
 
     return res.status(201).json({
       BookingData: data,
@@ -125,7 +135,7 @@ exports.getChefBookings= async (req, res, next) => {
   }
 };
 
-exports.hostCancelBooking=async(req,res,next)=>{
+exports.hostCancelBooking = async (req, res, next) => {
   const token = req.cookies.host_token;
   if (!token) {
     return res.status(401).json({
@@ -136,7 +146,7 @@ exports.hostCancelBooking=async(req,res,next)=>{
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -154,20 +164,28 @@ exports.hostCancelBooking=async(req,res,next)=>{
         message: "Host not found",
       });
     }
-   const booking = await Booking.findByIdAndDelete({
+    const booking = await Booking.findByIdAndDelete({
       _id: new Mongoose.Types.ObjectId(req.body.id),
     });
     if (!booking) {
-
-      const bookinghist =await BookingHistory.findOne({date:req.body.date,time:req.body.time,chef_id:req.body.chefid,bookedAt:req.body.bookedAt});
-      if(!bookinghist) {
-         return res
-        .status(404)
-        .json({ message: "Booking not found", id: req.body.id, });
+      const bookinghist = await BookingHistory.findOne({
+        date: req.body.date,
+        time: req.body.time,
+        chef_id: req.body.chefid,
+        bookedAt: req.body.bookedAt,
+      });
+      if (!bookinghist) {
+        return res
+          .status(404)
+          .json({ message: "Booking not found", id: req.body.id });
       }
       return res
         .status(400)
-        .json({ message: `Booking already ${bookinghist.status}`, id: req.body.id, status:bookinghist.status });
+        .json({
+          message: `Booking already ${bookinghist.status}`,
+          id: req.body.id,
+          status: bookinghist.status,
+        });
     }
     const bookinghistory = new BookingHistory({
       chef_id: booking.chef_id,
@@ -203,7 +221,7 @@ exports.getBooking = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -221,33 +239,36 @@ exports.getBooking = async (req, res, next) => {
         message: "Host not found",
       });
     }
-    const bookings = await Booking.find().populate("user_id", "name profileImage").populate("chef_id", "name profileImage");;
-    const bookingHistory=await BookingHistory.find().populate("user_id", "  name profileImage").populate("chef_id", " name profileImage");;
-    const pendingbooking=bookings.map((booking)=>{
+    const bookings = await Booking.find()
+      .populate("user_id", "name profileImage")
+      .populate("chef_id", "name profileImage");
+    const bookingHistory = await BookingHistory.find()
+      .populate("user_id", "  name profileImage")
+      .populate("chef_id", " name profileImage");
+    const pendingbooking = bookings.map((booking) => {
       return {
-        bookedAt:booking.bookedAt,
-        id:booking._id,
-        time:booking.time,
-        user:booking.user_id,
-        chef:booking.chef_id,
-        date:booking.date,
-        fees:booking.totalPrice,
-        status:"pending",
-      }
-    });
-    const histbooking=bookingHistory.map((booking)=>{
-      return{
-        bookedAt:booking.bookedAt,
-        id:booking._id,
-        user:booking.user_id,
-        chef:booking.chef_id,
-        date:booking.date,
-        fees:booking.totalPrice,
-        status:booking.status,
+        bookedAt: booking.bookedAt,
+        id: booking._id,
+        time: booking.time,
+        user: booking.user_id,
+        chef: booking.chef_id,
+        date: booking.date,
+        fees: booking.totalPrice,
+        status: "pending",
       };
-    })
-    const allbooking=[...pendingbooking,...histbooking];
-
+    });
+    const histbooking = bookingHistory.map((booking) => {
+      return {
+        bookedAt: booking.bookedAt,
+        id: booking._id,
+        user: booking.user_id,
+        chef: booking.chef_id,
+        date: booking.date,
+        fees: booking.totalPrice,
+        status: booking.status,
+      };
+    });
+    const allbooking = [...pendingbooking, ...histbooking];
 
     return res.status(201).json({
       allbooking,
@@ -272,7 +293,7 @@ exports.getYourBookings = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -292,7 +313,7 @@ exports.getYourBookings = async (req, res, next) => {
     }
     const bookings = await Booking.find({ user_id: existingUser._id }).populate(
       "chef_id",
-      "name profileImage _id type mobile"
+      "name profileImage _id type mobile",
     );
 
     return res.status(201).json({
@@ -318,7 +339,7 @@ exports.cancelBooking = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -332,15 +353,24 @@ exports.cancelBooking = async (req, res, next) => {
       _id: new Mongoose.Types.ObjectId(req.body.id),
     });
     if (!booking) {
-      const bookhist=await BookingHistory.findOne({date:req.body.date,time:req.body.time,chef_id:req.body.chefid,bookedAt:req.body.bookedAt}).populate("chef_id", "name profileImage _id type");
-      if(!bookhist){
+      const bookhist = await BookingHistory.findOne({
+        date: req.body.date,
+        time: req.body.time,
+        chef_id: req.body.chefid,
+        bookedAt: req.body.bookedAt,
+      }).populate("chef_id", "name profileImage _id type");
+      if (!bookhist) {
         return res
           .status(404)
           .json({ message: "Booking not found", id: req.body.id });
       }
-      return  res
+      return res
         .status(400)
-        .json({ message: `Booking already ${bookhist.status}`, id: req.body.id, bookinghistdata:bookhist ,});
+        .json({
+          message: `Booking already ${bookhist.status}`,
+          id: req.body.id,
+          bookinghistdata: bookhist,
+        });
     }
     const bookinghistory = new BookingHistory({
       chef_id: booking.chef_id,
@@ -355,7 +385,7 @@ exports.cancelBooking = async (req, res, next) => {
     });
     const confirmcancelled = await bookinghistory.save();
     const populatedcancelledBooking = await BookingHistory.findById(
-      confirmcancelled._id
+      confirmcancelled._id,
     ).populate("chef_id", "name profileImage _id type");
 
     return res.status(201).json({
@@ -419,7 +449,7 @@ exports.getPreBookingInfo = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -437,9 +467,10 @@ exports.getPreBookingInfo = async (req, res, next) => {
         message: "User not found please sign in",
       });
     }
-    if(existingUser.status===false){
-       return res.status(403).json({
-        message: "Your Account is Blocked from Host side for further info please contact us",
+    if (existingUser.status === false) {
+      return res.status(403).json({
+        message:
+          "Your Account is Blocked from Host side for further info please contact us",
       });
     }
 
@@ -505,7 +536,7 @@ exports.confirmBooking = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -523,9 +554,10 @@ exports.confirmBooking = async (req, res, next) => {
         message: "User not found please sign in",
       });
     }
-    if(existingUser.status===false){
-       return res.status(403).json({
-        message: "Your Account is Blocked from Host side for further info please contact us",
+    if (existingUser.status === false) {
+      return res.status(403).json({
+        message:
+          "Your Account is Blocked from Host side for further info please contact us",
       });
     }
     const existingchef = await Chef.findOne({
@@ -571,7 +603,7 @@ exports.confirmBooking = async (req, res, next) => {
     });
     const confirmbooking = await booking.save();
     const populatedConfirmBooking = await Booking.findById(
-      confirmbooking._id
+      confirmbooking._id,
     ).populate("chef_id", "name profileImage _id type");
 
     return res.status(201).json({

@@ -4,6 +4,7 @@ const jwt = require("jsonwebtoken");
 const Mongoose = require("mongoose");
 const bcrypt = require("bcrypt");
 const { uploadFileToS3, generateS3Key } = require("../utils/s3Util");
+const { encrypt, decrypt } = require("../Helper/tokenEncryptionDecryption");
 require("dotenv").config();
 const secret = process.env.SECRET_KEY;
 const { check, validationResult } = require("express-validator");
@@ -91,7 +92,7 @@ exports.updateChefProfile = [
     try {
       let decoded;
       try {
-        decoded = jwt.verify(token, secret);
+        decoded = jwt.verify(decrypt(token), secret);
         // token is valid
       } catch (err) {
         // token is invalid or expired
@@ -147,7 +148,7 @@ exports.updateChefProfilePic = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -209,7 +210,7 @@ exports.getChefProfile = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -299,7 +300,7 @@ exports.chefChekAuthStatus = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -359,9 +360,10 @@ exports.postChefLogin = async (req, res, next) => {
       secret,
       { expiresIn: rememberMe ? "7d" : "1h" },
     );
+    const encryptedToken = encrypt(token);
 
     // Set the token in the response cookies
-    res.cookie("chef_token", token, {
+    res.cookie("chef_token", encryptedToken, {
       httpOnly: true,
       secure: true, // Set to true if using HTTPS
       sameSite: "None", // Adjust based on your requirements
@@ -499,7 +501,7 @@ exports.addChef = [
     try {
       let decoded;
       try {
-        decoded = jwt.verify(token, secret);
+        decoded = jwt.verify(decrypt(token), secret);
         // token is valid
       } catch (err) {
         // token is invalid or expired
@@ -589,7 +591,7 @@ exports.hostchangechefAvailability = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
@@ -647,7 +649,7 @@ exports.getAllChefHost = async (req, res, next) => {
   try {
     let decoded;
     try {
-      decoded = jwt.verify(token, secret);
+      decoded = jwt.verify(decrypt(token), secret);
       // token is valid
     } catch (err) {
       // token is invalid or expired
