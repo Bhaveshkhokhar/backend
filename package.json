@@ -16,6 +16,7 @@
     "connect-mongodb-session": "^5.0.0",
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
+    "crypto": "^1.0.1",
     "dotenv": "^17.2.0",
     "express": "^5.1.0",
     "express-session": "^1.18.1",
@@ -24,6 +25,7 @@
     "mongodb": "^6.17.0",
     "mongoose": "^8.16.0",
     "multer": "^2.0.1",
+    "razorpay": "^2.9.6",
     "twilio": "^5.7.1"
   },
   "devDependencies": {

@@ -491,7 +491,7 @@ exports.confirmBooking = async (req, res, next) => {
   const dd = String(today.getDate()).padStart(2, "0");
   const todayStr = `${yyyy}-${mm}-${dd}`;
   if (req.body.date === todayStr && req.body.time < today.getHours() + 3) {
-    res.status(422).json({
+    return res.status(422).json({
       status: "not a valid time",
     });
   }
@@ -567,7 +567,7 @@ exports.confirmBooking = async (req, res, next) => {
       Address: req.body.address,
       modeOfPayment: req.body.modeOfPayment,
       bookedAt: new Date(),
-      paid: req.body.modeOfPayment === "COD" ? false : true,
+      paid: false,
     });
     const confirmbooking = await booking.save();
     const populatedConfirmBooking = await Booking.findById(

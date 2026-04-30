@@ -20,6 +20,7 @@ const userRouter = require("./routes/userRouter");
 const bookingRouter = require("./routes/bookingRouter");
 const bookingHistoryRouter = require("./routes/bookingHistoryRouter");
 const hostRouter = require("./routes/hostRouter");
+const rozarPayRouter=require("./routes/rozarPayRouter");
 
 //mongo path
 const DB_path = process.env.DB_PATH;
@@ -77,6 +78,7 @@ app.use(contactRouter);
 app.use(bookingRouter);
 app.use(bookingHistoryRouter);
 app.use(hostRouter);
+app.use(rozarPayRouter);
 
 const PORT = process.env.PORT || 3001;
 
