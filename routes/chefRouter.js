@@ -28,4 +28,7 @@ chefRouter.post(
   uploadMemory.single("image"),
   chefController.updateChefProfile,
 );
+chefRouter.post("/addChefAccountRequest", uploadMemory.single("image"), chefController.addChefAccountRequest);
+chefRouter.post("/chefOtpRequest", chefController.chefOtpRequest);
+chefRouter.post("/chefOtpVerify",chefController.chefOtpVerify);
 module.exports = chefRouter;

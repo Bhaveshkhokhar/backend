@@ -7,7 +7,13 @@ const { uploadFileToS3, generateS3Key } = require("../utils/s3Util");
 const { encrypt, decrypt } = require("../Helper/tokenEncryptionDecryption");
 require("dotenv").config();
 const secret = process.env.SECRET_KEY;
+const twilio = require("twilio");
 const { check, validationResult } = require("express-validator");
+const chefAccountRequest = require("../model/chefAccountRequest");
+
+const accountSid = process.env.ACCOUNTSID;
+const authToken = process.env.AUTHTOKEN;
+const client = twilio(accountSid, authToken);
 
 exports.updateChefProfile = [
   check("Name")
@@ -695,3 +701,249 @@ exports.getAllChefHost = async (req, res, next) => {
       .json({ message: "Internal server error please try after some time" });
   }
 };
+
+exports.chefOtpRequest = [
+  check("Number")
+    .trim()
+    .notEmpty()
+    .withMessage("Number is required")
+    .isLength({ min: 10, max: 10 })
+    .withMessage("Mobile number must be 10 digits")
+    .isNumeric()
+    .withMessage("Mobile number must contain only digits")
+    .custom(async (value) => {
+      const existingchef = await Chef.findOne({ mobile: value });
+      if (existingchef) {
+        throw new Error("Mobile number already have an account");
+      }
+    }),async (req, res, next) => {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res.status(422).json({
+        status: "fail",
+        field: errors.array()[0].param,
+        message: errors.array()[0].msg,
+      });
+    }
+    try{
+    const {Number}=req.body;
+    const existingchef = await Chef.findOne({ mobile: Number });
+    if (existingchef) {
+      return res.status(409).json({
+        status: fail,
+        message: "Chef with this number already exist in Database",
+      });
+    }
+    const otp= Math.floor(1000 + Math.random() * 9000);
+    req.session.otp=otp;
+    req.session.Number=Number;
+    req.session.verified=false;
+    await client.messages.create({
+        body: `Your OTP for request chef account on  Chef Booking is ${otp}. It will expire in 5 minutes.`,
+        from: process.env.Number,
+        to: `+91${Number}`,
+      });  
+       res.status(201).json({
+        status: "otp generated",
+        message: "otp sent to your mobile number",
+      });  
+      }catch(error){
+        console.error(err);
+      // Handle any errors that occur during the signup process
+      res.status(500).json({
+        status: "error",
+        message: "Internal server error during otp request",
+      });
+      }
+
+}];
+
+exports.chefOtpVerify = async (req, res, next) => {
+   
+    try{
+      const {Number,Otp}=req.body;
+      if(!req.session.otp){
+        return res.status(400).json({
+      status: "fail",
+      message: "OTP session expired or not found",
+    });
+      }
+      if(req.session.otp!=Otp ){
+        return res.status(400).json({
+        status: "fail",
+        message: "Invalid OTP",
+      });
+      } 
+      req.session.verified=true;
+      return res.status(200).json({
+        status: "success",
+        message: "OTP verified successfully",
+      });
+
+    }catch(err){
+console.error(err);
+      // Handle any errors that occur during the signup process
+      res.status(500).json({
+        status: "error",
+        message: "Internal server error during otp verification",
+      });
+    }
+
+};
+
+exports.addChefAccountRequest = [
+  check("Name")
+    .trim()
+    .notEmpty()
+    .withMessage("Name is required")
+    .isLength({ min: 2 })
+    .withMessage("Name must be at least 2 characters long")
+    .matches(/^[a-zA-Z\s]+$/)
+    .withMessage("Name must contain only letters and spaces"),
+
+  check("Password")
+    .trim()
+    .notEmpty()
+    .withMessage("Password is required")
+    .isLength({ min: 8 })
+    .withMessage("Password must be at least 8 characters long")
+    .matches(
+      /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]+$/,
+    )
+    .withMessage(
+      "Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character",
+    ),
+  
+  check("Price")
+    .notEmpty()
+    .withMessage("Price is required")
+    .isNumeric()
+    .withMessage("Price must be a number")
+    .custom((val) => val >= 0)
+    .withMessage("Price must be non-negative"),
+
+  check("Type")
+    .notEmpty()
+    .withMessage("Type is required")
+    .isIn([
+      "One-Time Service",
+      "Chef's Table",
+      "Chef for Party",
+      "Chef Subscription",
+    ])
+    .withMessage("Type must be a valid option"),
+
+  check("Speciality")
+    .trim()
+    .notEmpty()
+    .withMessage("Speciality is required")
+    .isLength({ min: 2 })
+    .withMessage("Speciality must be at least 2 characters"),
+
+  check("Bio")
+    .trim()
+    .notEmpty()
+    .withMessage("Bio is required")
+    .isLength({ max: 1000 })
+    .withMessage("Bio must be at most 1000 characters"),
+
+  check("Certifications")
+    .customSanitizer((value) => {
+      if (typeof value === "string") {
+        return value.split(",").map((v) => v.trim());
+      }
+      return value;
+    })
+    .isArray({ min: 1 })
+    .withMessage("At least one certification is required")
+    .custom((certs) => certs.every((c) => typeof c === "string"))
+    .withMessage("Each certification must be a string"),
+
+  check("Experience")
+    .notEmpty()
+    .withMessage("Experience is required")
+    .isNumeric()
+    .withMessage("Experience must be a number")
+    .custom((val) => val >= 0)
+    .withMessage("Experience must be non-negative"),
+
+  async (req, res, next) => {
+    const errors = validationResult(req);
+
+    if (!errors.isEmpty()) {
+      return res.status(422).json({
+        status: "fail",
+        field: errors.array()[0].param,
+        message: errors.array()[0].msg,
+      });
+    }
+    try {
+      if(!req.session.otp){
+        return res.status(400).json({
+      status: "fail",
+      message: "OTP session expired or not found",
+    });
+      }
+      if(!req.session.verified){
+        return res.status(400).json({
+          status: "fail",
+          message: "OTP not verified",
+        });
+      }
+      const existingchef = await chefAccountRequest.findOne({ mobile: req.session.Number });
+      if (existingchef) {
+        return res.status(409).json({
+          status: "fail",
+          message: "ChefRequest with this number already exist in Database",
+        });
+      }
+      if (!req.file) {
+        return res.status(404).json({
+          status: "fail",
+          message: "profile image is required",
+        });
+      }
+      const hashedPassword = await bcrypt.hash(req.body.Password, 10);
+
+      const fileKey = generateS3Key(
+        "chef",
+        req.session.Number,
+        req.file.originalname,
+      );
+      const imageUrl = await uploadFileToS3({
+        buffer: req.file.buffer,
+        key: fileKey,
+        contentType: req.file.mimetype,
+      });
+
+      const chefRequest = {
+        mobile: req.session.Number,
+        password: hashedPassword,
+        profileImage: imageUrl,
+        name: req.body.Name, // ensure boolean
+        type: req.body.Type,
+        price: Number(req.body.Price),
+        speciality: req.body.Speciality,
+        bio: req.body.Bio,
+        experience: Number(req.body.Experience),
+        certifications: Array.isArray(req.body.Certifications)
+          ? req.body.Certifications
+          : req.body.Certifications?.split(",").map((c) => c.trim()), // default
+      };
+
+      const chefObject = new chefAccountRequest(chefRequest);
+      const chefData = await chefObject.save();
+
+      return res.status(201).json({
+        status: "success",
+        message: "request is added successfully wait for approval",
+      });
+    } catch (error) {
+      console.error("Error add chef request details:", error);
+      res
+        .status(500)
+        .json({ message: "Internal server error please try after some time" });
+    }
+  },
+];
