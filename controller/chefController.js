@@ -111,7 +111,7 @@ exports.updateChefProfile = [
       const existingchef = await Chef.findOne({ mobile: decoded.Number });
       if (!existingchef) {
         return res.status(404).json({
-          status: fail,
+          status: "fail",
           message: "Chef not found in Database",
         });
       }
@@ -528,13 +528,13 @@ exports.addChef = [
       const existingchef = await Chef.findOne({ mobile: req.body.Number });
       if (existingchef) {
         return res.status(409).json({
-          status: fail,
+          status: "fail",
           message: "Chef already exist in Database",
         });
       }
       if (!req.file) {
         return res.status(404).json({
-          status: fail,
+          status: "fail",
           message: "profile image is required",
         });
       }
@@ -731,8 +731,16 @@ exports.chefOtpRequest = [
     const existingchef = await Chef.findOne({ mobile: Number });
     if (existingchef) {
       return res.status(409).json({
-        status: fail,
+        status: "fail",
         message: "Chef with this number already exist in Database",
+      });
+    }
+    const existingchefRequest = await chefAccountRequest.findOne({ mobile: Number });
+    if (existingchefRequest) {
+      console.log("chef request with this number already exist in Database");
+      return res.status(409).json({
+        status: "fail",
+        message: "ChefRequest with this number already exist in Database",
       });
     }
     const otp= Math.floor(1000 + Math.random() * 9000);
@@ -748,7 +756,7 @@ exports.chefOtpRequest = [
         status: "otp generated",
         message: "otp sent to your mobile number",
       });  
-      }catch(error){
+      }catch(err){
         console.error(err);
       // Handle any errors that occur during the signup process
       res.status(500).json({
