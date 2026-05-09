@@ -52,9 +52,9 @@ app.use(
     store: store,
     cookie: {
       maxAge: 1000 * 60 * 5, // 5 minutes in milliseconds
-      secure: false,
+      secure: true,
       httpOnly: true,
-      sameSite: "Lax", // Adjust based on your requirements
+      sameSite: "none", // Adjust based on your requirements
     },
   }),
 );
