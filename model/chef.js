@@ -17,7 +17,7 @@ const ChefSchema = new mongoose.Schema({
 
   profileImage: {
     type: String, // Path or URL
-    default: "/assets/default-chef.jpg",
+    default: "https://chefwale1.s3.us-west-2.amazonaws.com/chef/default-chef.jpg",
   },
 
   available: {

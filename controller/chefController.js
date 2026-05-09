@@ -10,6 +10,7 @@ const secret = process.env.SECRET_KEY;
 const twilio = require("twilio");
 const { check, validationResult } = require("express-validator");
 const chefAccountRequest = require("../model/chefAccountRequest");
+const chef = require("../model/chef");
 
 const accountSid = process.env.ACCOUNTSID;
 const authToken = process.env.AUTHTOKEN;
@@ -955,3 +956,146 @@ exports.addChefAccountRequest = [
     }
   },
 ];
+
+exports.getAllChefAccountRequest=async(req,res,next)=>{
+  const token =req.cookies.host_token;
+  if(!token){
+    return res.status(401).json({
+      isLoggedIn:false,
+      message:"please login",
+    });
+  }
+  try{
+    let decoded;
+    try {
+      decoded = jwt.verify(decrypt(token), secret);
+      // token is valid
+    } catch (err) {
+      // token is invalid or expired
+      return res.status(401).json({
+        isLoggedIn: false,
+        message: "Admin is not authenticated please login",
+      });
+    }
+    const chefRequests=await chefAccountRequest.find();
+    res.status(201).json({status:"success",chefRequests:chefRequests});
+  }catch(err){
+    console.error("Error while geting chef Account Request data:", err);
+    return res
+      .status(500)
+      .json({ message: "Internal server error please try after some time" });
+  }
+}
+
+exports.ApproveChefAccountRequest=async(req,res,next)=>{
+  const token =req.cookies.host_token;
+  if(!token){
+    return res.status(401).json({
+      isLoggedIn:false,
+      message:"please login",
+    });
+  }
+  try{
+    let decoded;
+    try {
+      decoded = jwt.verify(decrypt(token), secret);
+      // token is valid
+    } catch (err) {
+      // token is invalid or expired
+      return res.status(401).json({
+        isLoggedIn: false,
+        message: "Admin is not authenticated please login",
+      });
+    }
+    const chefRequest=await chefAccountRequest.findById(req.body.id);
+    if(!chefRequest){
+      return res.status(404).json({
+        status:"fail",
+        message:"Chef Account Request not found",
+      });
+    }
+    const existingchef = await Chef.findOne({ mobile: chefRequest.mobile });
+    if (existingchef) {
+      return res.status(409).json({
+        status: "fail", 
+        message: "Chef with this number already exist in Database",
+      });
+      }
+
+    const chef ={
+      mobile: chefRequest.mobile,
+      password: chefRequest.password,
+      profileImage: chefRequest.profileImage,
+      name: chefRequest.name,
+      available: true, // default to available when approved
+      type: chefRequest.type,
+      price: chefRequest.price,
+      speciality: chefRequest.speciality,
+      bio: chefRequest.bio,
+      experience: chefRequest.experience,
+      certifications: chefRequest.certifications,
+      rating: 0, // default
+    };
+    const chefObject = new Chef(chef);
+    await chefObject.save();
+    await chefAccountRequest.findByIdAndDelete(req.body.id);
+    await client.messages.create({
+        body: ` Congratulations! Your request for a chef account on Chef Booking has been approved. You can now log in and start using our platform to connect with Customers. Welcome aboard!`,
+        from: process.env.Number,
+        to: `+91${chefRequest.mobile}`,
+      });
+    return res.status(201).json({
+      status:"success",
+      message:"Chef Account Request approved successfully",
+    });
+
+  }catch(err){
+    console.error("Error while approving chef Account Request:", err);
+    return res
+      .status(500)
+      .json({ message: "Internal server error please try after some time" });
+  }
+}
+
+exports.RejectChefAccountRequest=async(req,res,next)=>{
+  const token =req.cookies.host_token;
+  if(!token){
+    return res.status(401).json({
+      isLoggedIn:false,
+      message:"please login",
+    });
+  }
+  try{
+    let decoded; 
+    try{
+      decoded = jwt.verify(decrypt(token), secret);
+    }catch(err){
+      return res.status(401).json({
+        isLoggedIn:false,
+        message:"Admin is not authenticated please login",
+      });
+    }
+    const chefRequest=await chefAccountRequest.findById(req.body.id);
+    if(!chefRequest){
+      return res.status(404).json({
+        status:"fail",
+        message:"Chef Account Request not found",
+      });
+    }
+    await chefAccountRequest.findByIdAndDelete(req.body.id);
+    await client.messages.create({
+        body: `We regret to inform you that your request for a chef account on Chef Booking has been rejected. If you have any questions or need further assistance, please feel free to contact our support team. Thank you for your interest in our platform.`,
+        from: process.env.Number,
+        to: `+91${chefRequest.mobile}`, 
+      });
+    return res.status(201).json({
+      status:"success",
+      message:"Chef Account Request rejected successfully",
+    }); 
+  }catch(err){
+    console.error("Error while rejecting chef Account Request:", err);
+    return res
+      .status(500)
+      .json({ message: "Internal server error please try after some time" });
+  }
+}
